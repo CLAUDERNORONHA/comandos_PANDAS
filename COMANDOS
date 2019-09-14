@@ -1,0 +1,417 @@
+ PRINCIPAIS COMANDOS DO PANDAS
+ 
+ 
+                                  PRINCIPAIS COMANDOS DO PANDAS
+
+# Carregando o arquivo csv para um dataframe
+
+df = pd.read_csv('sih-janeiro-2017-cirurgias-eletiva-e-emergencia.csv', sep =';', encoding='cp1252', usecols=[3, 6, 7, 8, 12, 14])
+
+# Somente a primeira parte, até onde está dando erro
+df_janeiro_1 = pd.read_csv('emendasparlamentares-012017.csv', nrows=113)
+
+# Agora vamos carregar o mesmo arquivo csv mas pulando as primeiras linhas, que já foram carregadas
+# Usaremos o skiprows para isso
+df_janeiro_2 = pd.read_csv('emendasparlamentares-012017.csv', skiprows=114)
+df_janeiro_2.head()
+
+# Mesmo problema em fevereiro -> mesma solução
+# A primeira parte
+df_fevereiro_1 = pd.read_csv('emendasparlamentares-022017.csv', nrows=1558)
+
+# Já vamos converter a coluna VALOR_REEMBOLSADO no momento da carga. Leia a documentação
+df = pd.read_csv(arquivo, delimiter=';', encoding='cp1252', skiprows=1, dtype={"VALOR_REEMBOLSADO": float}, decimal=',')
+
+# Importando o arquivo xls
+df = pd.read_excel('verba_indenizatoria_2017.xlsx')
+
+# e importando apenas as colunas selecionados -> usecols=[1, 2, 3, 4, 8, 14]
+df = pd.read_excel("Salarios_Juizes_TJDFT_122017.xls", sheet_name="Contracheque", header=None,  skiprows=20, usecols=[1, 2, 3, 4, 8, 14])
+
+
+# Incluindo o cabecalho para as 5 colunas importadas
+df.columns = ["Nome", "Cargo", "Lotacao", "Subsidio", "Rendimento_Bruto", "Rendimento_Liquido"]
+
+# Exibindo os 5 primeiros registros importados
+df.head()
+
+                                     IMPORTANDO API
+# Importando as bibliotecas
+import pandas as pd
+# Usamos a biblioteca requests para fazer uma requisição a algum site
+import requests
+
+# Queremos as escolas que estão em funcionamento mas não têm energia, nem água, nem esgoto
+url = 'http://educacao.dadosabertosbr.com/api/escolas/buscaavancada?situacaoFuncionamento=1&energiaInexistente=on&aguaInexistente=on&esgotoInexistente=on'
+
+# Obtendo os dados
+# Vamos fazer uma requisicao ao site e receber um texto como resposta
+resposta = requests.get(url)
+
+# O texto da resposta
+# Pode ser o código de uma página, por exemplo (raspagem)
+resposta.text
+
+# Criando o DataFrame
+df = pd.DataFrame(resposta.json()[1])
+
+df.head()
+
+
+                                                                       EXEMPLO 2 API 
+
+# Importando as bibliotecas
+import pandas as pd
+import requests
+
+# URL de acesso aos dados via api
+url = 'https://dadosabertos.camara.leg.br/api/v2/deputados?itens=100'
+
+# Pandas consegue ler JSON diretamente
+# df = pd.read_json(url)
+# ISSO NUNCA FUNCIONA
+# Vamos ter que requisitar o arquivo, transformar em lista, pegar apenas o elemento desejado e transformar em DF
+
+# Obtendo os dados
+resposta = requests.get(url)
+
+# Criando o DataFrame
+df = pd.DataFrame(resposta.json()['dados'])
+
+df.head()
+
+
+#import pandas as pd
+#import numpy as np
+%matplotlib inline
+import folium # criando mapas
+
+
+# Como obter os links para as próximas páginas
+resposta.json()['links'][1]['href']
+
+# Separar os links da resposta
+for item in resposta.json()['links']:    
+    if item['rel'] == 'self':
+        atual = item['href']
+    elif item['rel'] == 'last':
+        ultimo = item['href']
+    elif item['rel'] == 'next':
+        proximo = item['href']
+
+# Enquanto a pagina atual for diferente da ultima pagina
+while atual != ultimo:
+    # Requisita os dados
+    resposta = requests.get(proximo)
+    # Adiciona no df
+    df = df.append(pd.DataFrame(resposta.json()['dados']))
+    
+    # Separar os links da resposta
+    for item in resposta.json()['links']:
+        if item['rel'] == 'self':
+            atual = item['href']
+        elif item['rel'] == 'last':
+            ultimo = item['href']
+        elif item['rel'] == 'next':
+            proximo = item['href']
+        
+df.count()
+
+
+
+
+
+
+
+
+# Mudando o nome das colunas para um nome mais intuitivo
+df.columns = ['Hospital', 'Municipio', 'Complexidade', 'Carater Atendimento', 'Sub Grupo Procedimento', 'Procedimento']
+# Verificando a qtde de registros
+df_janeiro_2.count()
+# Vamos verificar a quantidade de registros no arquivo
+df_janeiro_1.count()
+
+# Isso vale apenas para as colunas que contenham valores numéricos
+df.describe()
+
+# Podemos mudar o tipo dos campos se for preciso
+df.dtypes
+
+# Vamos começar a análise
+# Qual o somatório dos valores pagos
+# Qual o valor total reembolsado
+df['VALOR_REEMBOLSADO'].sum()
+
+# Qual a soma de todos as linhas com valores nulos por coluna?
+df.isnull().sum()
+
+# Vamos analisar as linhas onde Nº Documento é nulo
+df[df['Nº Documento'].isnull()]
+
+# Vamos fazer melhor!
+# Quais os 5 maiores gastos?
+df.nlargest(5, 'Valor')
+
+# E os 5 menores gastos?
+df.nsmallest(5, 'Valor')
+
+# essa coluna no dataframe e depois executando o método count()
+df["Nome"].count() # ou df.Nome.count()
+
+# E também é possível formatar a saída para um texto mais legível
+print(f"O TJDFT possui {df.Nome.count()} magistrados")
+
+
+
+
+# Vamos verificar os valores únicos da coluna de hospitais
+df['Hospital'].unique()
+
+# Vamos encontrar o CNPJ da Vivo
+
+df[df['Empresa (ou Profissional)'] == 'VIVO TELEFÔNICA BRASIL S/A']
+
+# Vamos preencher o valor do CNPJ da Vivo no registro 1076 na coluna 4 (começa de 0)
+df.iloc[1076, 4] = '02.558.157/0001-62'
+
+# Verificando se funcionou
+df[df['Empresa (ou Profissional)'] == 'VIVO TELEFÔNICA BRASIL S/A']
+# Vamos contar a qtde de cirurgias de cada hospital
+df.Hospital.value_counts()
+
+Observando os dados podemos notar que o mês faltante no campo Data de Emissão é o mês 08
+# Vamos preencher o valor da Data de Emissão no registro 1076 na coluna 5
+df.iloc[1076, 5] = '2017-08-01'
+
+# Verificando se funcionou
+df[df['Empresa (ou Profissional)'] == 'VIVO TELEFÔNICA BRASIL S/A']
+
+# Vamos encontrar o CNPJ da CEB
+df[df['Empresa (ou Profissional)'] == 'CEB']
+
+# Qual o salário médio dos aposentados do TJDFT?
+print(f"No TJDFT um magistrado aposentado recebe, em média, R${df_aposentados.Rendimento_Liquido.mean().round(2)}")
+
+
+# Vamos olhar agora o subgrupo
+df['Sub Grupo Procedimento'].value_counts()
+
+# Podemos plotar o gráfico de barras mostrando os tipos de cirurgia
+%matplotlib inline
+
+df['Sub Grupo Procedimento'].value_counts().plot.bar()
+
+
+# Vamos pegar apenas os hospitais que possuem 'BASE' em alguma posição do seu nome
+df_hospbase = df[df.Hospital.str.contains('BASE')]
+
+df_hospbase.head()
+
+# Cuidado: colunas que só existem em 1 dataframe serão adicionadas ao novo DataFrame criado
+# Outra possibilidade é usar a função Concat, que funciona de forma semelhante. Leia a documentação
+
+# Iremos concatenar inicialmente a parte inicial dos dois arquivos
+df_anterior = df_janeiro_1.append(df_fevereiro_1, ignore_index=True)
+
+df_anterior.count()
+
+
+# Agora, considerando apenas as cirurgias no Hospital de Base, vamos verificar a qtde de cada procedimento
+df_hospbase.Procedimento.value_counts()
+
+
+# Como exemplo, vamos verificar apenas as cirurgias que envolveram amputação
+# Como em alguns casos amputação está escrito com acento e em outros não, vamos usar um pedaço da palavra
+df_hospbase[df_hospbase.Procedimento.str.contains('AMPUTA')].Hospital.count()
+
+
+# Trabalhar com agrupamento
+# Vamos voltar o DataFrame original, que chamamos de df
+# Agrupar os dados pelo hospital e mostrar a primeira cirurgia de cada hospital
+df.groupby('Hospital').first()
+
+
+# Fazendo o agrupamento por um campo x eu posso visualizar os demais campos, que já estarão separados pelo agrupamento
+# Vamos saber a qtde de cirurgias por carater de atendimento por hospital
+df.groupby('Hospital')['Carater Atendimento'].value_counts()
+
+
+
+                                                                          AGRUPAMENTO
+# É possível, também, agrupar por 2 ou mais campos, e exibir os demais dados usando o agrupamento
+df.groupby(['Hospital', 'Carater Atendimento'])['Sub Grupo Procedimento'].value_counts()
+
+# Vamos analisar o somatório de gastos de cada deputado
+# Para isso vamos agrupar os dados pelo Nome do Deputado e depois somar o campo valor
+df.groupby(df['Nome'])['Valor'].sum().sort_values(ascending = False)
+
+# Vamos agrupar os valores pelo mês da data de emissão, pegando a soma dos valores por mês
+df.groupby(df['Data de Emissão'].dt.month)['Valor'].sum()
+
+
+             AGORA VAMOS PIVOTAR!
+
+# Temos que mudar as informações de display para caber na tela
+pd.set_option('display.max_columns', 500)
+
+# Pivotar!
+df.pivot_table(index='Sub Grupo Procedimento', columns='Hospital', aggfunc='count', fill_value=0, margins=True)
+
+
+# Podemos juntar DataFrames, colocando um no final do outro. Chamamos isso de Append
+# Cuidado: colunas que só existem em 1 dataframe serão adicionadas ao novo DataFrame criado
+# Outra possibilidade é usar a função Concat, que funciona de forma semelhante. Leia a documentação
+
+# Iremos concatenar inicialmente a parte inicial dos dois arquivos
+df_anterior = df_janeiro_1.append(df_fevereiro_1, ignore_index=True)
+
+df_anterior.count()
+
+# Fazer a mesma coisa para os outros 2 DataFrames que correspondem aos dados da parte final dos dois arquivos
+df_posterior = df_janeiro_2.append(df_fevereiro_2, ignore_index=True)
+
+df_posterior.count()
+
+
+# Quantos reembolsos por senador?
+df.SENADOR.value_counts()
+
+# Vamos verificar os senadores
+df.SENADOR.unique()
+
+
+                                                               CRIANDO  GRUPOBY
+
+# Quanto cada senador recebeu de reembolso
+df.groupby('SENADOR')['VALOR_REEMBOLSADO'].sum().sort_values(ascending=False)
+
+# Quanto foi reembolsado por cada tipo de despesa
+df.groupby('TIPO_DESPESA')['VALOR_REEMBOLSADO'].sum().sort_values(ascending=False)
+
+                                               PIVOTAR
+# Mas podemos especificar a agregação por count ou por sum
+# Leia a documentação
+
+df.pivot_table(index={'SENADOR', "TIPO_DESPESA"}, columns="MES", values='VALOR_REEMBOLSADO', aggfunc='sum', fill_value=0, margins=True)
+
+
+                                 
+
+
+
+
+
+CRIAR UM NOVO DATAFRAME
+# Considerando que o Senador Joao Capiberibe foi o que solicitou o maior valor de reembolsos
+# vamos criar um DataFrame especifico para o senador
+
+df_joao_capiberibe = df[df[‘SENADOR’] == ‘JOÃO CAPIBERIBE’]
+df_joao_capiberibe.head()
+
+
+# Verificando se o campo DATA teve o seu tipo alterado
+
+df_joao_capiberibe.dtypes
+
+
+
+
+                                                          GRAFICOS
+
+# Importando a biblioteca
+import matplotlib.pyplot as plt
+
+# e determinando que os graficos serão desenhados no próprio Jupyter Notebook
+%matplotlib inline
+
+# Vamos ver a distribuição dos rendimento líquidos
+df.Rendimento_Liquido.hist(bins=50)
+plt.title("Distribuicao por Salarios")
+plt.ylabel('Qtde de Magistrados')
+plt.xlabel('Rendimento Líquido');
+
+
+
+                       CONVERTER STRING EM FLOAT
+
+# VAMOS CONVERTER TX_DISTORÇÃO PARA FLOAT
+#PRIMEIRO VAMOS TROCAR VIRGULA POR PONTOS
+
+df['tx_distorcao']=df['tx_distorcao'].str.replace(',','.')
+df.head()
+
+# FAZENDO A CONVERSÃO para FLOAT
+
+df['tx_distorcao'] = df['tx_distorcao'].astype(float)
+
+# 10 MUNICIPIOS COM MENOR TAXA DE DESTORÇÃO
+df.nsmallest(10, 'tx_distorcao')
+
+
+plotando o histograma da taxa de distorção
+
+df['tx_distorcao'].plot.hist(bins=100)
+
+Quantidade de municipios com tx_distorção menor igual a 10
+
+Quantidade de municipios com tx_distorção menor igual a 10
+#Quantidade de municipios com tx_distorção menor igual a 10
+df[df['tx_distorcao'] <= 10].count()
+
+#Quantidade de municipios com tx_distorção menor igual a 10
+df[df['tx_distorcao'] >= 45].count()
+
+
+Vamos aprender como folium funciona (mapas)
+
+
+# criar uma mapa com as coordenadas do Brasil
+brasil = folium.Map(
+  location=[-13.6603615, -69.6775883],  # coordenadas do google maps
+  zoom_start = 4
+)
+#mostrando o mapa
+Brasil
+
+RIO GRANDE DO SUL
+
+# Vamos criar o mapra do RS
+rs = folium.Map(
+  #location = [-30.3918717, -55.9134337],
+   location = [-30
+               .5, -52],
+    zoom_start = 6 
+)
+Rs
+
+# Percorrer o dtaframe com base nas melhres escolas (tx_distorcao <= 10)
+# desenhar um marcadr paracada escola
+# usando o for e iterrows
+
+for indice, municipio in df[df['tx_distorcao'] <=10 ].iterrows():
+    folium.Marker(
+      location = [municipio['latitude'], municipio['longitude']],
+      popup=municipio['Municipio'],
+      icon=folium.map.Icon(color='green')  
+    ).add_to(rs)
+Rs
+
+SEPARANDO DOS PIORES E MELHORES
+
+# Percorrer o dtaframe com base nas piores escolas (tx_distorcao >=45)
+# desenhar um marcadr paracada escola
+# usando o for e iterrows
+
+for indice, municipio in df[df['tx_distorcao'] >=45 ].iterrows():
+    folium.Marker(
+      location = [municipio['latitude'], municipio['longitude']],
+      popup=municipio['Municipio'],
+      icon=folium.map.Icon(color='red')  
+    ).add_to(rs)
+Rs
+
+
+# QUAL A MELHOR TAXA DE DISTORCAO DE PA
+df[df['Municipio'] == 'Porto Alegre']['tx_distorcao']
+
+
